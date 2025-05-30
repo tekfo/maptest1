@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>GPX Distance Tool</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      width: 100vw;
+      box-sizing: border-box;
+      display: flex;
+    }
+    #sidebar {
+      width: 250px;
+      background: #f4f4f4;
+      padding: 20px;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      z-index: 1000;
+    }
+    #map {
+      flex: 1;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <input type="file" id="gpxUpload" accept=".gpx" />
+    <label for="startPoint" style="margin-top:20px;">Starting Point</label>
+    <input type="text" id="startPoint" placeholder="Lng: 10.093028, Lat: 55.991200" style="width:100%;margin-bottom:10px;" />
+    <label for="endPoint">Ending Point</label>
+    <input type="text" id="endPoint" placeholder="Lng: 10.093028, Lat: 55.991200" style="width:100%;" />
+    <div id="distanceResult" style="margin-top:20px;font-size:1.1em;color:#333;"></div>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.5.1/gpx.min.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
