@@ -39,8 +39,33 @@ function updateDistance(trackCoords, start, end) {
   if (start && end) {
     const distance = calculateDistanceAlongTrack(trackCoords, start, end);
     document.getElementById('distanceResult').textContent = `Distance: ${distance.toFixed(2)} km`;
+
+    // Calculate time if average speed is set
+    const avgSpeed = parseFloat(document.getElementById('avgSpeed').value);
+    const timeDiv = document.getElementById('timeResult');
+    if (avgSpeed && avgSpeed > 0) {
+      const hours = distance / avgSpeed;
+      const h = Math.floor(hours);
+      const m = Math.round((hours - h) * 60);
+      timeDiv.textContent = `Estimated Time: ${h}h ${m}m`;
+    } else {
+      timeDiv.textContent = '';
+    }
+  } else {
+    document.getElementById('distanceResult').textContent = '';
+    document.getElementById('timeResult').textContent = '';
   }
 }
+
+// Listen for changes in the average speed field to update time dynamically
+document.getElementById('avgSpeed').addEventListener('input', function () {
+  // Try to get points from input fields
+  const start = parseLngLat(document.getElementById('startPoint').value);
+  const end = parseLngLat(document.getElementById('endPoint').value);
+  if (window.trackCoords && start && end) {
+    updateDistance(window.trackCoords, start, end);
+  }
+});
 
 document.getElementById('gpxUpload').addEventListener('change', function (event) {
   const file = event.target.files[0];
