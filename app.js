@@ -5,6 +5,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 let selectedPoints = [];
+let globalTrackCoords = null; // Add this at the top of your file
 
 function calculateDistanceAlongTrack(trackCoords, pointA, pointB) {
   return turf.length(turf.lineSlice(pointA, pointB, turf.lineString(trackCoords)));
@@ -36,7 +37,7 @@ function collectLatLngs(layer) {
 }
 
 function updateDistance(trackCoords, start, end) {
-  if (start && end) {
+  if (trackCoords && start && end) {
     const distance = calculateDistanceAlongTrack(trackCoords, start, end);
     document.getElementById('distanceResult').textContent = `Distance: ${distance.toFixed(2)} km`;
 
@@ -59,11 +60,10 @@ function updateDistance(trackCoords, start, end) {
 
 // Listen for changes in the average speed field to update time dynamically
 document.getElementById('avgSpeed').addEventListener('input', function () {
-  // Try to get points from input fields
   const start = parseLngLat(document.getElementById('startPoint').value);
   const end = parseLngLat(document.getElementById('endPoint').value);
-  if (window.trackCoords && start && end) {
-    updateDistance(window.trackCoords, start, end);
+  if (globalTrackCoords && start && end) {
+    updateDistance(globalTrackCoords, start, end);
   }
 });
 
@@ -85,6 +85,7 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       // Use the helper to get all latlngs
       const latlngs = collectLatLngs(gpx);
       const trackCoords = latlngs.map(p => [p.lng, p.lat]);
+      globalTrackCoords = trackCoords; // Store globally for speed recalculation
 
       let selectedPoints = [];
       let selectedMarkers = [];
