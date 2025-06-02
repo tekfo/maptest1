@@ -77,7 +77,7 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
 
     const gpxLayer = new L.GPX(gpxText, {
       async: true,
-      marker_options: { shadowUrl: null },
+      marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
       waypoints: false
     }).on('loaded', function (e) {
 
@@ -90,6 +90,35 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       let allTrackCoords = []; // Used for Turf.js distance calc
 
       tracks.forEach(trk => {
+
+        const nameEl = trk.querySelector("name");
+        const name = nameEl ? nameEl.textContent : "Unnamed Route";
+
+        const firstSeg = trk.querySelector("trkseg");
+        const trkpts = firstSeg?.querySelectorAll("trkpt");
+
+        if (trkpts && trkpts.length > 1) {
+          const coords = Array.from(trkpts).map(pt => {
+            const lat = parseFloat(pt.getAttribute("lat"));
+            const lon = parseFloat(pt.getAttribute("lon"));
+            return [lon, lat]; // turf uses [lng, lat]
+          });
+
+          const line = turf.lineString(coords);
+          const pointAt1km = turf.along(line, 350, { units: 'meters' });
+
+          const lat = pointAt1km.geometry.coordinates[1];
+          const lon = pointAt1km.geometry.coordinates[0];
+
+          const marker = L.marker([lat, lon]).addTo(map);
+          marker.bindTooltip(name, {
+            permanent: true,
+            direction: "right",
+            offset: [10, 0],
+            className: "route-name-label"
+          }).openTooltip();
+        }
+
         const colorEl = trk.querySelector("gpxx\\:DisplayColor, DisplayColor");
         
         let colorRaw = colorEl ? colorEl.textContent.trim() : "blue";
@@ -146,8 +175,8 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       let selectedPoints = [];
       let selectedMarkers = [];
 
-      map.on('click', function (e) {
-        return;
+      map.on('contextmenu', function (e) {
+   
         if (selectedPoints.length === 2) {
           selectedPoints = [];
           selectedMarkers.forEach(m => map.removeLayer(m));
