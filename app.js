@@ -10,7 +10,7 @@ let globalTrackCoords = null; // Add this at the top of your file
 function calculateDistanceAlongTrack(trackCoords, pointA, pointB) {
   return turf.length(turf.lineSlice(pointA, pointB, turf.lineString(trackCoords)));
 }
-console.log("L.GPX is", typeof L.GPX);
+
 let startMarker = null;
 let endMarker = null;
 
@@ -77,27 +77,83 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
 
     const gpxLayer = new L.GPX(gpxText, {
       async: true,
-      marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null }
+      marker_options: { shadowUrl: null },
+      waypoints: false
     }).on('loaded', function (e) {
-      const gpx = e.target;
-      map.fitBounds(gpx.getBounds());
 
-      // Use the helper to get all latlngs
-      const latlngs = collectLatLngs(gpx);
-      const trackCoords = latlngs.map(p => [p.lng, p.lat]);
-      globalTrackCoords = trackCoords; // Store globally for speed recalculation
+      // Parse XML manually
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(gpxText, "application/xml");
+      const tracks = xml.querySelectorAll("trk");
 
+      console.log("Parsed GPX tracks:", tracks.length);
+      let allTrackCoords = []; // Used for Turf.js distance calc
+
+      tracks.forEach(trk => {
+        const colorEl = trk.querySelector("gpxx\\:DisplayColor, DisplayColor");
+        
+        let colorRaw = colorEl ? colorEl.textContent.trim() : "blue";
+
+        // if colorRaw is not blue, assign a random color that is not blue
+        
+        if (colorRaw.toLowerCase() !== "blue") {
+          // Generate a random color
+          const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+          console.log("Using random color for track:", randomColor);
+          colorRaw = randomColor;
+        }
+
+        console.log("Track color:", colorRaw);
+
+        // Optional: map Garmin colors to CSS values
+        const colorMap = {
+          Red: "#ff0000",
+          Blue: "#0000ff",
+          Green: "#00cc00",
+          Yellow: "#e6e600",
+          Purple: "#800080",
+          DarkGray: "#555"
+        };
+        const color = colorMap[colorRaw] || colorRaw.toLowerCase();
+
+        const segments = trk.querySelectorAll("trkseg");
+
+        segments.forEach(seg => {
+          const latlngs = [];
+          const points = seg.querySelectorAll("trkpt");
+          points.forEach(pt => {
+            const lat = parseFloat(pt.getAttribute("lat"));
+            const lon = parseFloat(pt.getAttribute("lon"));
+            latlngs.push([lat, lon]);
+            allTrackCoords.push([lon, lat]); // Turf.js wants [lng, lat]
+          });
+
+          // Draw colored track segment
+          L.polyline(latlngs, {
+            color: color,
+            weight: 4
+          }).addTo(map);
+        });
+      });
+
+      globalTrackCoords = allTrackCoords; // ✅ For distance calculation
+
+      // Fit the full view
+      const bounds = L.latLngBounds(allTrackCoords.map(c => [c[1], c[0]]));
+      map.fitBounds(bounds);
+
+      // Distance logic (click to mark start/end)
       let selectedPoints = [];
       let selectedMarkers = [];
 
-      // Handle map clicks
-      gpx.getLayers()[0].on('click', function (e) {
+      map.on('click', function (e) {
+        return;
         if (selectedPoints.length === 2) {
           selectedPoints = [];
           selectedMarkers.forEach(m => map.removeLayer(m));
           selectedMarkers = [];
           document.getElementById('distanceResult').textContent = '';
-          // Clear input fields
+          document.getElementById('timeResult').textContent = '';
           document.getElementById('startPoint').value = '';
           document.getElementById('endPoint').value = '';
         }
@@ -108,14 +164,52 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
         const marker = L.marker(e.latlng).addTo(map);
         selectedMarkers.push(marker);
 
-        // Update input fields with selected points
         if (selectedPoints.length === 1) {
-          document.getElementById('startPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+          document.getElementById('startPoint').value =
+            `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
         } else if (selectedPoints.length === 2) {
-          document.getElementById('endPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
-          updateDistance(trackCoords, selectedPoints[0], selectedPoints[1]);
+          document.getElementById('endPoint').value =
+            `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+          updateDistance(allTrackCoords, selectedPoints[0], selectedPoints[1]);
         }
       });
+      // const gpx = e.target;
+      // map.fitBounds(gpx.getBounds());
+
+      // // Use the helper to get all latlngs
+      // const latlngs = collectLatLngs(gpx);
+      // const trackCoords = latlngs.map(p => [p.lng, p.lat]);
+      // globalTrackCoords = trackCoords; // Store globally for speed recalculation
+
+      // let selectedPoints = [];
+      // let selectedMarkers = [];
+
+      // // Handle map clicks
+      // gpx.getLayers()[0].on('click', function (e) {
+      //   if (selectedPoints.length === 2) {
+      //     selectedPoints = [];
+      //     selectedMarkers.forEach(m => map.removeLayer(m));
+      //     selectedMarkers = [];
+      //     document.getElementById('distanceResult').textContent = '';
+      //     // Clear input fields
+      //     document.getElementById('startPoint').value = '';
+      //     document.getElementById('endPoint').value = '';
+      //   }
+
+      //   const clickedPoint = [e.latlng.lng, e.latlng.lat];
+      //   selectedPoints.push(clickedPoint);
+
+      //   const marker = L.marker(e.latlng).addTo(map);
+      //   selectedMarkers.push(marker);
+
+      //   // Update input fields with selected points
+      //   if (selectedPoints.length === 1) {
+      //     document.getElementById('startPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+      //   } else if (selectedPoints.length === 2) {
+      //     document.getElementById('endPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+      //     updateDistance(trackCoords, selectedPoints[0], selectedPoints[1]);
+      //   }
+      // });
 
       // Handle sidebar input for start/end points
       function handleInput(inputId, markerRef, otherInputId, isStart) {
@@ -146,7 +240,50 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       handleInput('endPoint', endMarker, 'startPoint', false);
 
       gpxLayer.addTo(map);
-    });
+    })
+    .on('addpoint', function(e) {
+      //console.log("addpoint event", e.element.textContent); // 🔍 See what is actually in the event
+
+       const point = e.point;
+
+        // Extract lat/lng
+        const latlng = point.getLatLng();
+        let name = e.element.textContent || '';
+
+        // if starting with line break, remove it
+        if (name.startsWith('\n')) {
+          name = name.substring(1);
+        }
+
+        // replace line breaks and trim whitespace
+        const cleanedName = name.replace(/[\n\r]+/g, '<br/> ').trim();
+
+        // extract first line
+        const firstLineEnd = cleanedName.indexOf('<br/>');
+        let displayName = firstLineEnd !== -1 ? cleanedName.substring(0, firstLineEnd) : cleanedName;
+
+        // name is format xx-xx-xxx-xxx-x. Extract secondt part
+        const nameParts = displayName.split('-');
+        if (nameParts.length > 1) {
+          // Use the second part as the display name
+          displayName = nameParts[1].trim();
+        }
+
+        // Create marker manually
+        const marker = L.marker(latlng).addTo(map);
+
+        // Add label
+        if (name) {
+          marker.bindTooltip(displayName, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, 0, 30, 0],
+            className: 'gpx-label'
+          }).openTooltip();
+        }
+
+    })
+    .addTo(map);
 
   };
   reader.readAsText(file);
