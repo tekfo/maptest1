@@ -1,3 +1,20 @@
+var rmmcIcon = L.icon({
+    iconUrl: 'rmmc.png',
+
+    iconSize:     [40, 40], // size of the icon
+    iconAnchor:   [20, 20], // point of the icon which will correspond to marker's location
+
+});
+
+var rmbcIcon = L.icon({
+    iconUrl: 'rmbc.png',
+
+    iconSize:     [40, 40], // size of the icon
+    iconAnchor:   [20, 20], // point of the icon which will correspond to marker's location
+
+});
+
+
 const map = L.map('map').setView([55.68, 12.57], 14);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -81,6 +98,7 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       waypoints: false
     }).on('loaded', function (e) {
 
+
       // Parse XML manually
       const parser = new DOMParser();
       const xml = parser.parseFromString(gpxText, "application/xml");
@@ -96,28 +114,6 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
 
         const firstSeg = trk.querySelector("trkseg");
         const trkpts = firstSeg?.querySelectorAll("trkpt");
-
-        if (trkpts && trkpts.length > 1) {
-          const coords = Array.from(trkpts).map(pt => {
-            const lat = parseFloat(pt.getAttribute("lat"));
-            const lon = parseFloat(pt.getAttribute("lon"));
-            return [lon, lat]; // turf uses [lng, lat]
-          });
-
-          const line = turf.lineString(coords);
-          const pointAt1km = turf.along(line, 350, { units: 'meters' });
-
-          const lat = pointAt1km.geometry.coordinates[1];
-          const lon = pointAt1km.geometry.coordinates[0];
-
-          const marker = L.marker([lat, lon]).addTo(map);
-          marker.bindTooltip(name, {
-            permanent: true,
-            direction: "right",
-            offset: [10, 0],
-            className: "route-name-label"
-          }).openTooltip();
-        }
 
         const colorEl = trk.querySelector("gpxx\\:DisplayColor, DisplayColor");
         
@@ -145,6 +141,37 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
         };
         const color = colorMap[colorRaw] || colorRaw.toLowerCase();
 
+
+        if (trkpts && trkpts.length > 1) {
+          const coords = Array.from(trkpts).map(pt => {
+            const lat = parseFloat(pt.getAttribute("lat"));
+            const lon = parseFloat(pt.getAttribute("lon"));
+            return [lon, lat]; // turf uses [lng, lat]
+          });
+
+          const line = turf.lineString(coords);
+          const pointAt1km = turf.along(line, 500, { units: 'meters' });
+
+          const lat = pointAt1km.geometry.coordinates[1];
+          const lon = pointAt1km.geometry.coordinates[0];
+
+          // Use a solid color marker for the route label
+          const marker = L.circleMarker([lat, lon], {
+            color: color,        // border color
+            fillColor: color,    // fill color
+            fillOpacity: 1,      // fully solid
+            radius: 8            // adjust size as needed
+          }).addTo(map);
+
+          marker.bindTooltip(name, {
+            permanent: true,
+            direction: "right",
+            offset: [10, 0],
+            className: "route-name-label",
+          }).openTooltip();
+        }
+
+       
         const segments = trk.querySelectorAll("trkseg");
 
         segments.forEach(seg => {
@@ -190,18 +217,22 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
         const clickedPoint = [e.latlng.lng, e.latlng.lat];
         selectedPoints.push(clickedPoint);
 
-        const marker = L.marker(e.latlng).addTo(map);
-        selectedMarkers.push(marker);
+        
 
         if (selectedPoints.length === 1) {
           document.getElementById('startPoint').value =
             `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+            const marker = L.marker(e.latlng, {icon: rmbcIcon}).addTo(map);
+            selectedMarkers.push(marker);
         } else if (selectedPoints.length === 2) {
           document.getElementById('endPoint').value =
             `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
+            const marker = L.marker(e.latlng, {icon: rmmcIcon}).addTo(map);
+             selectedMarkers.push(marker);
           updateDistance(allTrackCoords, selectedPoints[0], selectedPoints[1]);
         }
       });
+
       // const gpx = e.target;
       // map.fitBounds(gpx.getBounds());
 
@@ -253,7 +284,12 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
           }
           input.style.borderColor = '';
           if (markerRef[0]) map.removeLayer(markerRef[0]);
-          markerRef[0] = L.marker([lngLat[1], lngLat[0]], {color: isStart ? 'green' : 'red'}).addTo(map);
+          if (isStart) {
+             markerRef[0] = L.marker([lngLat[1], lngLat[0]], {icon: rmbcIcon}).addTo(map);
+          }
+          else {
+             markerRef[0] = L.marker([lngLat[1], lngLat[0]], {icon: rmmcIcon}).addTo(map);
+          }
 
           // Get the other point if available
           const otherVal = document.getElementById(otherInputId).value;
@@ -268,12 +304,12 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
       handleInput('startPoint', startMarker, 'endPoint', true);
       handleInput('endPoint', endMarker, 'startPoint', false);
 
-      gpxLayer.addTo(map);
+      //gpxLayer.addTo(map);
     })
     .on('addpoint', function(e) {
-      //console.log("addpoint event", e.element.textContent); // 🔍 See what is actually in the event
-
-       const point = e.point;
+      e.cancel = true; // Prevent default addpoint behavior
+  
+        const point = e.point;
 
         // Extract lat/lng
         const latlng = point.getLatLng();
@@ -283,6 +319,8 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
         if (name.startsWith('\n')) {
           name = name.substring(1);
         }
+
+        console.log("Adding point:", name);
 
         // replace line breaks and trim whitespace
         const cleanedName = name.replace(/[\n\r]+/g, '<br/> ').trim();
@@ -298,21 +336,35 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
           displayName = nameParts[1].trim();
         }
 
-        // Create marker manually
-        const marker = L.marker(latlng).addTo(map);
+        // Create marker with name as text inside the circle
+        const marker = L.marker(latlng, {
+          icon: L.divIcon({
+            className: 'custom-circle-label',
+            html: `<div style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 15px;
+              height: 15px;
+              border-radius: 50%;
+              background: #0000FF;
+              color: #fff;
+              font-size: 8px;
+              font-weight: bold;
+              border: 2px solid #0000FF;">
+                ${displayName}
+              </div>`
+          }),
+          interactive: true // disables mouse events if you want
+        }).addTo(map);
 
-        // Add label
+    
         if (name) {
-          marker.bindTooltip(displayName, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, 0, 30, 0],
-            className: 'gpx-label'
-          }).openTooltip();
+          marker.bindPopup(name);
         }
 
     })
-    .addTo(map);
+    // .addTo(map);
 
   };
   reader.readAsText(file);
