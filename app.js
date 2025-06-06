@@ -14,12 +14,15 @@ var rmbcIcon = L.icon({
 
 });
 
+// https://mt0.google.com/vt/lyrs=m,traffic&hl=en&x={x}&y={y}&z={z}&s=Galil
+// https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 
 const map = L.map('map').setView([55.68, 12.57], 14);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; OpenStreetMap contributors'
-}).addTo(map);
+// L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//   attribution: '&copy; OpenStreetMap contributors'
+// }).addTo(map);
+L.tileLayer('https://mt0.google.com/vt/lyrs=m,traffic&hl=en&x={x}&y={y}&z={z}&s=Galil',).addTo(map);
 
 let selectedPoints = [];
 let globalTrackCoords = null; // Add this at the top of your file
