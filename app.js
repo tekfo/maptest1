@@ -1,8 +1,30 @@
+// Save original
+const _origParse = L.GPX.prototype._parse_gpx_data;
+
+// Override
+L.GPX.prototype._parse_gpx_data = function (xml) {
+  // Ensure every <wpt> has a <desc> child
+  xml.querySelectorAll('wpt').forEach(wpt => {
+    if (!wpt.querySelector('desc')) {
+      const desc = xml.createElement('desc');
+      desc.textContent = '';
+      wpt.appendChild(desc);
+    }
+  });
+
+  // Call the original parser
+  return _origParse.call(this, xml);
+};
+
+
 const map = L.map('map').setView([55.68, 12.57], 14);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
+
+// https://mt0.google.com/vt/lyrs=m,traffic&hl=en&x={x}&y={y}&z={z}&s=Galil
+// https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png
 
 let selectedPoints = [];
 let globalTrackCoords = null; // Add this at the top of your file
