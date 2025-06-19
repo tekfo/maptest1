@@ -1,20 +1,4 @@
-// Save original
-const _origParse = L.GPX.prototype._parse_gpx_data;
 
-// Override
-L.GPX.prototype._parse_gpx_data = function (xml) {
-  // Ensure every <wpt> has a <desc> child
-  xml.querySelectorAll('wpt').forEach(wpt => {
-    if (!wpt.querySelector('desc')) {
-      const desc = xml.createElement('desc');
-      desc.textContent = '';
-      wpt.appendChild(desc);
-    }
-  });
-
-  // Call the original parser
-  return _origParse.call(this, xml);
-};
 
 var rmmcIcon = L.icon({
     iconUrl: 'rmmc.png',
@@ -114,14 +98,13 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
 
   const reader = new FileReader();
   reader.onload = function (e) {
-    const gpxText = e.target.result;
+    let gpxText = e.target.result;
 
     const gpxLayer = new L.GPX(gpxText, {
       async: true,
       marker_options: { startIconUrl: null, endIconUrl: null, shadowUrl: null },
       waypoints: false
     }).on('loaded', function (e) {
-
 
       // Parse XML manually
       const parser = new DOMParser();
@@ -257,43 +240,7 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
         }
       });
 
-      // const gpx = e.target;
-      // map.fitBounds(gpx.getBounds());
-
-      // // Use the helper to get all latlngs
-      // const latlngs = collectLatLngs(gpx);
-      // const trackCoords = latlngs.map(p => [p.lng, p.lat]);
-      // globalTrackCoords = trackCoords; // Store globally for speed recalculation
-
-      // let selectedPoints = [];
-      // let selectedMarkers = [];
-
-      // // Handle map clicks
-      // gpx.getLayers()[0].on('click', function (e) {
-      //   if (selectedPoints.length === 2) {
-      //     selectedPoints = [];
-      //     selectedMarkers.forEach(m => map.removeLayer(m));
-      //     selectedMarkers = [];
-      //     document.getElementById('distanceResult').textContent = '';
-      //     // Clear input fields
-      //     document.getElementById('startPoint').value = '';
-      //     document.getElementById('endPoint').value = '';
-      //   }
-
-      //   const clickedPoint = [e.latlng.lng, e.latlng.lat];
-      //   selectedPoints.push(clickedPoint);
-
-      //   const marker = L.marker(e.latlng).addTo(map);
-      //   selectedMarkers.push(marker);
-
-      //   // Update input fields with selected points
-      //   if (selectedPoints.length === 1) {
-      //     document.getElementById('startPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
-      //   } else if (selectedPoints.length === 2) {
-      //     document.getElementById('endPoint').value = `Lng: ${clickedPoint[0].toFixed(6)}, Lat: ${clickedPoint[1].toFixed(6)}`;
-      //     updateDistance(trackCoords, selectedPoints[0], selectedPoints[1]);
-      //   }
-      // });
+      
 
       // Handle sidebar input for start/end points
       function handleInput(inputId, markerRef, otherInputId, isStart) {
@@ -332,7 +279,7 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
     })
     .on('addpoint', function(e) {
       e.cancel = true; // Prevent default addpoint behavior
-  
+     
         const point = e.point;
 
         // Extract lat/lng
@@ -355,11 +302,11 @@ document.getElementById('gpxUpload').addEventListener('change', function (event)
 
         // name is format xx-xx-xxx-xxx-x. Extract secondt part
         const nameParts = displayName.split('-');
-        if (nameParts.length > 1) {
-          // Use the second part as the display name
-          displayName = nameParts[1].trim();
-        }
-
+        // if (nameParts.length > 1) {
+        //   // Use the second part as the display name
+        //   displayName = nameParts[1].trim();
+        // }
+        displayName = nameParts[0].trim();
         // Create marker with name as text inside the circle
         const marker = L.marker(latlng, {
           icon: L.divIcon({
